@@ -1,14 +1,11 @@
 package io.github.alexescalonafernandez.mbox.sort.task;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.TreeMap;
 import java.util.concurrent.*;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**

@@ -38,26 +38,27 @@ public class WriteTask implements Runnable{
         Optional.ofNullable(sortedFilesSupplier)
                 .map(listSupplier -> listSupplier.get()).ifPresent(
                         files -> files.stream().forEach(file -> {
-                    RandomAccessFile reader = null;
-                    try {
-                        reader = new RandomAccessFile(file, "r");
-                        while (reader.getFilePointer() < reader.length()) {
-                            byteReadsConsumer.accept(reader.read(chunk));
-                        }
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    finally {
-                        try {
-                            if(reader != null)
-                                reader.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }));
+                            RandomAccessFile reader = null;
+                            try {
+                                reader = new RandomAccessFile(file, "r");
+                                while (reader.getFilePointer() < reader.length()) {
+                                    byteReadsConsumer.accept(reader.read(chunk));
+                                }
+                            } catch (FileNotFoundException e) {
+                                e.printStackTrace();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            finally {
+                                try {
+                                    if(reader != null)
+                                        reader.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        })
+        );
         Optional.ofNullable(writer).ifPresent(pw -> pw.close());
     }
 }
