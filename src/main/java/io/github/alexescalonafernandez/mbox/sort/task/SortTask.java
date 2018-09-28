@@ -18,12 +18,12 @@ public class SortTask implements Runnable{
     private final File mboxFile;
     private final Consumer<Integer> progressNotifier;
     private final BiConsumer<Long, File> sortFileNotifier;
-    private PrintWriter printWriter;
+    private PrintWriter writer;
     public SortTask(File mboxFile, Consumer<Integer> progressNotifier, BiConsumer<Long, File> sortFileNotifier) {
         this.mboxFile = mboxFile;
         this.progressNotifier = progressNotifier;
         this.sortFileNotifier = sortFileNotifier;
-        this.printWriter = null;
+        this.writer = null;
     }
 
     public void run() {
@@ -66,7 +66,7 @@ public class SortTask implements Runnable{
     }
 
     private void tryCloseWriter() {
-        Optional.ofNullable(printWriter).ifPresent(pw -> pw.close());
+        Optional.ofNullable(writer).ifPresent(pw -> pw.close());
     }
 
     private void processLine(final String line) throws IOException {
@@ -84,9 +84,9 @@ public class SortTask implements Runnable{
                 File file = File.createTempFile(String.valueOf(serialize), ".tmp");
                 file.deleteOnExit();
                 sortFileNotifier.accept(serialize, file);
-                printWriter = new PrintWriter(new FileOutputStream(file, true), true);
+                writer = new PrintWriter(new FileOutputStream(file, true), true);
             }
         }
-        Optional.ofNullable(printWriter).ifPresent(pw -> pw.print(line));
+        Optional.ofNullable(writer).ifPresent(pw -> pw.print(line));
     }
 }
