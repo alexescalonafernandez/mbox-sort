@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Created by alexander.escalona on 27/09/2018.
@@ -11,12 +12,12 @@ import java.util.function.Consumer;
 public class WriteTask implements Runnable{
     private final File mboxFile;
     private final Consumer<Integer> progressNotifier;
-    private final List<File> sortedFiles;
+    private final Supplier<List<File>> sortedFilesSupplier;
     private PrintStream writer;
-    public WriteTask(File mboxFile, Consumer<Integer> progressNotifier, List<File> sortedFiles) {
+    public WriteTask(File mboxFile, Consumer<Integer> progressNotifier, Supplier<List<File>> sortedFilesSupplier) {
         this.mboxFile = mboxFile;
         this.progressNotifier = progressNotifier;
-        this.sortedFiles = sortedFiles;
+        this.sortedFilesSupplier = sortedFilesSupplier;
         this.writer = null;
     }
 
@@ -34,8 +35,9 @@ public class WriteTask implements Runnable{
             writer.write(chunk, 0, byteReads);
             progressNotifier.accept(byteReads);
         };
-        Optional.ofNullable(sortedFiles)
-                .ifPresent(files -> files.stream().forEach(file -> {
+        Optional.ofNullable(sortedFilesSupplier)
+                .map(listSupplier -> listSupplier.get()).ifPresent(
+                        files -> files.stream().forEach(file -> {
                     RandomAccessFile reader = null;
                     try {
                         reader = new RandomAccessFile(file, "r");
