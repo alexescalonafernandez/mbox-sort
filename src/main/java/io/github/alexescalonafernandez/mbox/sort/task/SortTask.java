@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
  */
 public class SortTask implements Runnable{
     private final File mboxFile;
+    private File defaultOutputFile;
     private final Consumer<Integer> progressNotifier;
     private final BiConsumer<Long, File> sortFileNotifier;
     private PrintWriter writer;
@@ -26,7 +27,16 @@ public class SortTask implements Runnable{
         this.mboxFile = mboxFile;
         this.progressNotifier = progressNotifier;
         this.sortFileNotifier = sortFileNotifier;
-        this.writer = null;
+        boolean flag = true;
+        while (flag) {
+            try {
+                this.defaultOutputFile = File.createTempFile("mbox", ".tmp");
+                this.defaultOutputFile.deleteOnExit();
+                writer = new PrintWriter(new FileOutputStream(this.defaultOutputFile, true), true);
+                sortFileNotifier.accept(-1L, this.defaultOutputFile);
+                flag = false;
+            } catch (IOException e) {}
+        }
     }
 
     public void run() {
@@ -80,15 +90,13 @@ public class SortTask implements Runnable{
             try {
                 serialize = tryGetDateSerialization(matcher.group(1));
                 tryCloseWriter();
-                File file = File.createTempFile(String.valueOf(serialize), ".tmp");
+                File file = File.createTempFile("mbox", ".tmp");
                 file.deleteOnExit();
                 sortFileNotifier.accept(serialize, file);
                 writer = new PrintWriter(new FileOutputStream(file, true), true);
             } catch (Exception ex) {
-                System.out.println(line);
-                ex.printStackTrace();
-                throw ex;
-//                System.out.println(line);
+                tryCloseWriter();
+                writer = new PrintWriter(new FileOutputStream(this.defaultOutputFile, true), true);
             }
         }
         Optional.ofNullable(writer).ifPresent(pw -> pw.print(line));
