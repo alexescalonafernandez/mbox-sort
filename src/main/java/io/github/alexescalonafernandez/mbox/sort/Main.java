@@ -2,6 +2,7 @@ package io.github.alexescalonafernandez.mbox.sort;
 
 import io.github.alexescalonafernandez.mbox.sort.task.TaskExecutor;
 import io.github.alexescalonafernandez.mbox.sort.task.TaskNotification;
+import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -54,6 +55,11 @@ public class Main {
                 .filter(e -> e.length > 0)
                 .map(e -> new File(e[0]))
                 .filter(file -> file.exists() && file.isFile())
+                .filter(file ->
+                        Optional.ofNullable(FilenameUtils.getExtension(file.getAbsolutePath()))
+                                .map(ext -> "mbox".equals(ext.toLowerCase()))
+                                .orElse(false)
+                )
                 .map(file -> (Supplier<String>) () -> file.getAbsolutePath())
                 .orElse(() -> getFilePath())
                 .get();
