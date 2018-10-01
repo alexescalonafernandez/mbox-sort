@@ -78,21 +78,23 @@ public class SortTask implements Runnable{
         long serialize;
         if(matcher.find()) {
             try {
-                LocalDateTime dateTime = tryGetDate(matcher.group(1));
+                serialize = tryGetDateSerialization(matcher.group(1));
                 tryCloseWriter();
-                serialize = dateTime.toEpochSecond(ZoneOffset.UTC);
                 File file = File.createTempFile(String.valueOf(serialize), ".tmp");
                 file.deleteOnExit();
                 sortFileNotifier.accept(serialize, file);
                 writer = new PrintWriter(new FileOutputStream(file, true), true);
             } catch (Exception ex) {
                 System.out.println(line);
+                ex.printStackTrace();
+                throw ex;
+//                System.out.println(line);
             }
         }
         Optional.ofNullable(writer).ifPresent(pw -> pw.print(line));
     }
 
-    private LocalDateTime tryGetDate(String toMatch) {
+    private long tryGetDateSerialization(String toMatch) {
         final StringBuilder builder = new StringBuilder(toMatch);
         final HashMap<String, String> fields = new HashMap<>();
 
@@ -102,14 +104,24 @@ public class SortTask implements Runnable{
             return value;
         };
 
-        fields.put("zone", Optional.ofNullable(Pattern.compile("(?:\\B)[\\+-]\\d{4}"))
+        fields.put("zone",
+                Optional.ofNullable(Pattern.compile(
+                        "((?<=\\b)Z) # match Z UTC, which is the same as +0000\n" +
+                                "| # or\n" +
+                                "(\n" +
+                                "(?<=\\B)[\\+-] # match + or - sign\n" +
+                                "(\\d{1,2}|\\d{2}:?\\d{2}(:?\\d{2})?) # match h|hh|hh:mm|hhmm|hh:mm:ss|hhmmss\n" +
+                                ")\n" +
+                                "(?=\\s|\\n|$) # end boundary",
+                        Pattern.COMMENTS
+                ))
                 .map(pattern -> pattern.matcher(builder.toString()))
                 .filter(m -> m.find())
                 .map(mapper)
                 .orElse("+0000")
         );
 
-        Optional.ofNullable(Pattern.compile("\\b(\\d{2}):(\\d{2}):?(\\d{2})?\\b"))
+        Optional.ofNullable(Pattern.compile("(?<=\\s)(\\d{2}):(\\d{2}):?(\\d{2})?(?=\\s|\\n|$)"))
                 .map(pattern -> pattern.matcher(builder.toString()))
                 .filter(m -> m.find())
                 .map(m -> {
@@ -123,28 +135,28 @@ public class SortTask implements Runnable{
                 })
                 .orElse(null);
 
-        fields.put("year", Optional.ofNullable(Pattern.compile("\\b\\d{4}\\b"))
+        fields.put("year", Optional.ofNullable(Pattern.compile("(?<=\\s)\\d{4}(?=\\s|\\n|$)"))
                 .map(pattern -> pattern.matcher(builder.toString()))
                 .filter(m -> m.find())
                 .map(mapper)
                 .orElse(null)
         );
 
-        fields.put("day", Optional.ofNullable(Pattern.compile("\\b\\d{2}\\b"))
+        fields.put("day", Optional.ofNullable(Pattern.compile("(?<=\\s)\\d{2}(?=\\s|\\n|$)"))
                 .map(pattern -> pattern.matcher(builder.toString()))
                 .filter(m -> m.find())
                 .map(mapper)
                 .orElse(null)
         );
 
-        fields.put("monthName", Optional.ofNullable(Pattern.compile("\\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\b"))
+        fields.put("monthName", Optional.ofNullable(Pattern.compile("(?<=\\s)(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?=\\s|\\n|$)"))
                 .map(pattern -> pattern.matcher(builder.toString()))
                 .filter(m -> m.find())
                 .map(mapper)
                 .orElse(null)
         );
 
-        fields.put("monthNumber", Optional.ofNullable(Pattern.compile("\\b\\d{2}\\b"))
+        fields.put("monthNumber", Optional.ofNullable(Pattern.compile("(?<=\\s)\\d{2}(?=\\s|\\n|$)"))
                 .map(pattern -> pattern.matcher(builder.toString()))
                 .filter(m -> m.find())
                 .map(mapper)
@@ -171,6 +183,7 @@ public class SortTask implements Runnable{
                 .append(fields.get("zone"));
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MM yyyy HH:mm:ss Z", Locale.ENGLISH);
-        return LocalDateTime.parse(builder.toString(), formatter);
+        LocalDateTime dateTime = LocalDateTime.parse(builder.toString(), formatter);
+        return dateTime.toEpochSecond(ZoneOffset.of(fields.get("zone")));
     }
 }
